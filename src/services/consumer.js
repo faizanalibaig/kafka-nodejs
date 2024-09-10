@@ -1,5 +1,6 @@
 const { Kafka } = require("kafkajs");
 const mongoose = require("mongoose");
+const LedgerUser = require("../models/ledgeruser");
 
 const kafka = new Kafka({
   clientId: "worker-application",
@@ -14,7 +15,7 @@ const consumer = async () => {
     await mongoose.connect(mongoUri);
     console.log("Connected to DB in consumer");
   } catch (error) {
-    console.log("Error connecting to DB:", error);
+    console.error("Error connecting to DB:", error);
     process.exit(1);
   }
 
@@ -46,7 +47,20 @@ const consumer = async () => {
     eachMessage: async ({ topic, partition, message }) => {
       try {
         const data = JSON.parse(message.value.toString());
-        console.log(`Received message: ${JSON.stringify(data)}`);
+        console.log(`Received data: ${JSON.stringify(data)}`);
+
+        const result = await LedgerUser.updateMany(
+          {},
+          { $set: { name: "babar" } }
+        );
+        console.log("Update result:", result);
+
+        // if (data.message && data.message.name) {
+        //   const result = await LedgerUser.create({
+        //     name: data.message.name,
+        //   });
+        //   console.log("New ledger user created:", result);
+        // }
       } catch (error) {
         console.error("Error processing message:", error);
       }
@@ -54,4 +68,4 @@ const consumer = async () => {
   });
 };
 
-consumer().catch((err) => console.log("Error in consumer:", err));
+consumer().catch((err) => console.error("Error in consumer:", err));
