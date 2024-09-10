@@ -1,4 +1,5 @@
-const { Kafka, Partitioners } = require("kafkajs");
+const { Kafka } = require("kafkajs");
+const { Partitioners } = require("kafkajs");
 
 const kafka = new Kafka({
   clientId: "worker-application",
@@ -6,17 +7,35 @@ const kafka = new Kafka({
 });
 
 const producer = async () => {
-  const kafkaproducer = kafka.producer({
+  const kafkaProducer = kafka.producer({
     createPartitioner: Partitioners.LegacyPartitioner,
   });
 
   try {
-    await kafkaproducer.connect();
+    await kafkaProducer.connect();
+    console.log("Producer connected to Kafka");
 
     const topic = "worker-queue";
-  } catch (error) {}
+    const message = {
+      value: JSON.stringify({
+        message: {
+          name: "hello world",
+        },
+      }),
+    };
 
-  await producer.disconnect();
+    await kafkaProducer.send({
+      topic,
+      messages: [message],
+    });
+
+    console.log("Message sent successfully");
+  } catch (error) {
+    console.error("Error in producer:", error);
+  } finally {
+    await kafkaProducer.disconnect();
+    console.log("Producer disconnected");
+  }
 };
 
-producer().catch((err) => console.log(err));
+producer().catch((err) => console.log("Error in producer:", err));

@@ -1,20 +1,57 @@
 const { Kafka } = require("kafkajs");
+const mongoose = require("mongoose");
 
 const kafka = new Kafka({
   clientId: "worker-application",
   brokers: ["192.168.1.34:9092"],
 });
 
+const mongoUri =
+  "mongodb+srv://faizanali:faizanbaig@cluster1.vpjat.mongodb.net/your-database-name";
+
 const consumer = async () => {
-  const kafkaconsumer = kafka.consumer({
-    groupId: "worker-1",
-  });
+  try {
+    await mongoose.connect(mongoUri);
+    console.log("Connected to DB in consumer");
+  } catch (error) {
+    console.log("Error connecting to DB:", error);
+    process.exit(1);
+  }
+
+  const kafkaConsumer = kafka.consumer({ groupId: "worker-1" });
 
   try {
-    await kafkaconsumer.connect();
+    await kafkaConsumer.connect();
+    console.log("Connected to Kafka");
   } catch (error) {
-    console.log("error connecting to kafkaconsumer", error);
+    console.error("Error connecting to Kafka:", error);
+    await mongoose.disconnect();
+    process.exit(1);
   }
+
+  try {
+    await kafkaConsumer.subscribe({
+      topic: "worker-queue",
+      fromBeginning: true,
+    });
+    console.log("Subscribed to topic: worker-queue");
+  } catch (error) {
+    console.error("Error subscribing to Kafka topic:", error);
+    await kafkaConsumer.disconnect();
+    await mongoose.disconnect();
+    process.exit(1);
+  }
+
+  await kafkaConsumer.run({
+    eachMessage: async ({ topic, partition, message }) => {
+      try {
+        const data = JSON.parse(message.value.toString());
+        console.log(`Received message: ${JSON.stringify(data)}`);
+      } catch (error) {
+        console.error("Error processing message:", error);
+      }
+    },
+  });
 };
 
-consumer().catch((err) => console.log(err));
+consumer().catch((err) => console.log("Error in consumer:", err));
