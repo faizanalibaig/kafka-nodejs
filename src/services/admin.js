@@ -27,4 +27,4 @@ async function admin() {
   await admin.disconnect();
 }
 
-admin();
+admin().catch((err) => console.log(err));
