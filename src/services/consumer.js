@@ -2,13 +2,14 @@ const { Kafka } = require("kafkajs");
 const mongoose = require("mongoose");
 const LedgerUser = require("../models/ledgeruser");
 
+require("dotenv").config();
+
 const kafka = new Kafka({
   clientId: "worker-application",
   brokers: ["192.168.1.34:9092"],
 });
 
-const mongoUri =
-  "mongodb+srv://faizanali:faizanbaig@cluster1.vpjat.mongodb.net/your-database-name";
+const mongoUri = process.env.MONGO_URI;
 
 const consumer = async () => {
   try {
@@ -49,18 +50,18 @@ const consumer = async () => {
         const data = JSON.parse(message.value.toString());
         console.log(`Received data: ${JSON.stringify(data)}`);
 
-        const result = await LedgerUser.updateMany(
-          {},
-          { $set: { name: "babar" } }
-        );
-        console.log("Update result:", result);
+        // const result = await LedgerUser.updateMany(
+        //   {},
+        //   { $set: { name: "babar" } }
+        // );
+        // console.log("Update result:", result);
 
-        // if (data.message && data.message.name) {
-        //   const result = await LedgerUser.create({
-        //     name: data.message.name,
-        //   });
-        //   console.log("New ledger user created:", result);
-        // }
+        if (data.message && data.message.name) {
+          const result = await LedgerUser.create({
+            name: data.message.name,
+          });
+          console.log("New ledger user created:", result);
+        }
       } catch (error) {
         console.error("Error processing message:", error);
       }
